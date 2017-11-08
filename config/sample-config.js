@@ -11,7 +11,7 @@ const config = {
 /*
     daterange: {
       from: '2017-01-01 00:00',
-      to: '2017-11-07 00:00'
+      to: '2017-11-08 00:00'
     },
 */
     simulationBalance: {
