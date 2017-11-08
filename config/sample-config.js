@@ -7,13 +7,12 @@ const config = {
       currency: 'USDT',
       asset: 'BTC'
     },
-    daterange: 'scan',
-/*
+    //daterange: 'scan',
     daterange: {
-      from: '2017-01-01 00:00',
-      to: '2017-11-07 00:00'
+      from: '2017-07-01 00:00',
+      to: '2017-09-07 00:00'
     },
-*/
+
     simulationBalance: {
       'asset': 1,
       'currency': 1
@@ -31,12 +30,13 @@ const config = {
    but you can stop it any time you wish since the last max parameters are outputted every epoch
    */
   targetValue: 5000000000,
-  stratName: 'sample-strat',
+  stratName: 'MACD',
   candleValues: [5,15,30,60,120,240],
   getProperties: () => ({
     // Here add the indicators and the ranges you want to handle
     // In this case my strategy wants to test RSI and MACD ranges
     historySize: randomExt.integer(100, 20),
+/*
     persistence: randomExt.integer(10,0),
     stoploss: randomExt.integer(10,0),
     rsi: {
@@ -44,10 +44,13 @@ const config = {
       up: randomExt.integer(100,50),
       down: randomExt.integer(50,0),
     },
+*/
     macd: {
       short: 10,
       long: 21,
       signal: 9,
+    },
+    thresholds: {
       up: randomExt.float(20,0).toFixed(2),
       down: randomExt.float(0,-20).toFixed(2),
     },
