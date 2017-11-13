@@ -6,7 +6,7 @@ const fs = require('fs-extra');
 
 class Ga {
 
-  constructor({ gekkoConfig, stratName, targetValue, populationAmt, variation, mutateElements, candleValues, getProperties, apiUrl }, configName ) {
+  constructor({ gekkoConfig, stratName, targetValue, populationAmt, parallelqueries, variation, mutateElements, candleValues, getProperties, apiUrl }, configName ) {
     this.configName = configName.replace(/\.js|config\//gi, "");
     this.stratName = stratName;
     this.candleValues = candleValues;
@@ -16,6 +16,7 @@ class Ga {
     // Check for saved parameters from a previous run
     this.previousBestParams = null;
     this.populationAmt = populationAmt;
+    this.parallelqueries = parallelqueries;
     this.variation = variation;
     this.mutateElements = mutateElements;
     this.baseConfig = {
@@ -37,6 +38,7 @@ class Ga {
         tradingAdvisor: {
           enabled: true,
           method: this.stratName,
+          adapter: 'postgresql',
         },
         trader: {
           enabled: false,
@@ -298,7 +300,7 @@ class Ga {
   // Calls api for every element in testSeries and returns gain for each
   async fitnessApi(testsSeries) {
 
-    const numberOfParallelQueries = 8;
+    const numberOfParallelQueries = this.parallelqueries;
 
     const results = await this.queue(testsSeries, numberOfParallelQueries, async (data) => {
 

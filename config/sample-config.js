@@ -20,11 +20,13 @@ const config = {
   },
   apiUrl: 'http://localhost:3000',
   // Population size, better reduce this for larger data
-  populationAmt: 4,
+  populationAmt: 50,
   // How many completely new units will be added to the population (Population * variation must be a whole number!!)
-  variation: 0.5,
+  variation: 0.2,
   // How many components maximum to mutate at once
-  mutateElements: 8,
+  mutateElements: 4,
+  // How many parallel queries to run at once
+  parallelqueries: 10,
   /*
    When the algorithm reaches this value it will stop,
    but you can stop it any time you wish since the last max parameters are outputted every epoch
