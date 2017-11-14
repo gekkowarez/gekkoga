@@ -23,10 +23,10 @@ class Ga {
       gekkoConfig: {
         watch: gekkoConfig.watch,
         paperTrader: {
-          slippage: 0.05,
-          feeTaker: 0.25,
-          feeMaker: 0.25,
-          feeUsing: 'taker',
+          slippage: gekkoConfig.slippage,
+          feeTaker: gekkoConfig.feeTaker,
+          feeMaker: gekkoConfig.feeMaker,
+          feeUsing: gekkoConfig.feeUsing,
           simulationBalance: gekkoConfig.simulationBalance,
           reportRoundtrips: true,
           enabled: true
@@ -290,7 +290,7 @@ class Ga {
 
     Object.assign(conf.gekkoConfig.tradingAdvisor, {
       candleSize: data.candleSize,
-      historySize: data.historySize
+      historySize: data.historySize,
     });
 
     return conf;

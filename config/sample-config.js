@@ -12,11 +12,14 @@ const config = {
       from: '2017-07-01 00:00',
       to: '2017-09-07 00:00'
     },
-
     simulationBalance: {
       'asset': 1,
       'currency': 1
     },
+    slippage: 0.05,
+    feeTaker: 0.25,
+    feeMaker: 0.25,
+    feeUsing: 'taker', // maker || taker
   },
   apiUrl: 'http://localhost:3000',
   // Population size, better reduce this for larger data
