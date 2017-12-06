@@ -447,7 +447,7 @@ class Ga {
       let sharpe = maxResult[1];
       let position = maxResult[3];
 
-
+      this.notifynewhigh = false;
       if (this.mainObjective == 'score') {
         if (score >= allTimeMaximum.score) {
             this.notifynewhigh = true;
