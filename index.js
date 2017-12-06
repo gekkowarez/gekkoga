@@ -450,7 +450,7 @@ class Ga {
 
       if (this.mainObjective == 'score') {
         if (score >= allTimeMaximum.score) {
-
+            this.notifynewhigh = true;
             allTimeMaximum.parameters = population[position];
             allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
             allTimeMaximum.score = score;
@@ -461,7 +461,7 @@ class Ga {
         }
       } else if (this.mainObjective == 'profit') {
         if (profit >= allTimeMaximum.profit) {
-
+            this.notifynewhigh = true;
             allTimeMaximum.parameters = population[position];
             allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
             allTimeMaximum.score = score;
@@ -517,7 +517,7 @@ class Ga {
       const json = JSON.stringify(allTimeMaximum);
       await fs.writeFile(`./results/${this.configName}-${this.currency}_${this.asset}.json`, json, 'utf8').catch(err => console.log(err) );
 
-      if (this.sendemail) {
+      if (this.sendemail && this.notifynewhigh) {
         var transporter = nodemailer.createTransport({
           service: this.senderservice,
           auth: {
