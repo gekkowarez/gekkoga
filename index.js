@@ -1,4 +1,5 @@
 const async = require('async');
+const nodemailer = require('nodemailer');
 const randomExt = require('random-ext');
 const rp = require('request-promise');
 const { some } = require('bluebird');
@@ -6,14 +7,19 @@ const fs = require('fs-extra');
 
 class Ga {
 
-  constructor({ gekkoConfig, stratName, targetValue, populationAmt, parallelqueries, variation, mutateElements, candleValues, getProperties, apiUrl }, configName ) {
+  constructor({ gekkoConfig, stratName, mainObjective, populationAmt, parallelqueries, variation, mutateElements, notifications, getProperties, apiUrl }, configName ) {
     this.configName = configName.replace(/\.js|config\//gi, "");
     this.stratName = stratName;
-    this.candleValues = candleValues;
+    this.mainObjective = mainObjective;
     this.getProperties = getProperties;
     this.apiUrl = apiUrl;
-    this.targetValue = targetValue;
-    // Check for saved parameters from a previous run
+    this.sendemail = notifications.email.enabled;
+    this.senderservice = notifications.email.senderservice;
+    this.sender = notifications.email.sender;
+    this.senderpass = notifications.email.senderpass;
+    this.receiver = notifications.email.receiver;
+    this.currency = gekkoConfig.watch.currency;
+    this.asset = gekkoConfig.watch.asset;
     this.previousBestParams = null;
     this.populationAmt = populationAmt;
     this.parallelqueries = parallelqueries;
@@ -38,7 +44,6 @@ class Ga {
         tradingAdvisor: {
           enabled: true,
           method: this.stratName,
-          adapter: 'postgresql',
         },
         trader: {
           enabled: false,
@@ -67,7 +72,7 @@ class Ga {
   // Checks for, and if present loads old .json parameters
   async loadBreakPoint() {
 
-    const fileName = `./results/${this.configName}-${this.baseConfig.gekkoConfig.watch.currency}_${this.baseConfig.gekkoConfig.watch.asset}.json`;
+    const fileName = `./results/${this.configName}-${this.currency}_${this.asset}.json`;
     const exists = fs.existsSync(fileName);
 
     if(exists){
@@ -111,10 +116,6 @@ class Ga {
     } else {
       throw Error('Could not resolve a suitable state for previousBestParams');
     }
-
-    //let properties = this.getProperties();
-    //console.log(properties);
-    //return prop === 'all' ? properties : properties[prop];
   }
 
   // Creates random population from genes
@@ -194,21 +195,42 @@ class Ga {
   }
 
   // For the given population and fitness, returns new population and max score
-  runEpoch(population, populationFitness) {
-
+  runEpoch(population, populationProfits, populationSharpes, populationScores) {
     let selectionProb = [];
     let fitnessSum = 0;
-    let maxFitness = [0, 0];
+    let maxFitness = [0, 0, 0, 0];
 
     for (let i = 0; i < this.populationAmt; i++) {
 
-      if (populationFitness[i] > maxFitness[0]) {
+     if (this.mainObjective == 'score') {
 
-        maxFitness = [populationFitness[i], i];
+       if (populationProfits[i] < 0 && populationSharpes[i] < 0) {
+
+         populationScores[i] = (populationProfits[i] * populationSharpes[i]) * -1;
+
+       } else {
+
+         populationScores[i] = populationProfits[i] * populationSharpes[i];
+
+       }
+
+       if (populationScores[i] > maxFitness[2]) {
+
+         maxFitness = [populationProfits[i], populationSharpes[i], populationScores[i], i];
+
+       }
+
+     } else if (this.mainObjective == 'profit') {
+
+        if (populationProfits[i] > maxFitness[0]) {
+
+          maxFitness = [populationProfits[i], populationSharpes[i], populationScores[i], i];
+
+        }
 
       }
 
-      fitnessSum += populationFitness[i];
+      fitnessSum += populationProfits[i];
 
     }
 
@@ -224,7 +246,7 @@ class Ga {
 
       for (let j = 0; j < this.populationAmt; j++) {
 
-        selectionProb[j] = populationFitness[j] / fitnessSum;
+        selectionProb[j] = populationProfits[j] / fitnessSum;
 
       }
 
@@ -290,7 +312,7 @@ class Ga {
 
     Object.assign(conf.gekkoConfig.tradingAdvisor, {
       candleSize: data.candleSize,
-      historySize: data.historySize,
+      historySize: data.historySize
     });
 
     return conf;
@@ -305,13 +327,12 @@ class Ga {
     const results = await this.queue(testsSeries, numberOfParallelQueries, async (data) => {
 
       const outconfig = this.getConfig(data);
-
       const body = await rp.post({
         url: `${this.apiUrl}/api/backtest`,
         json: true,
         body: outconfig,
         headers: { 'Content-Type': 'application/json' },
-        timeout: 900000
+        timeout: 1200000
       });
 
       // These properties will be outputted every epoch, remove property if not needed
@@ -329,7 +350,7 @@ class Ga {
 
         }, {});
 
-        result = { profit: body.report.profit, metrics: picked };
+        result = { profit: body.report.profit, sharpe: body.report.sharpe, metrics: picked };
 
       }
 
@@ -337,50 +358,61 @@ class Ga {
 
     });
 
+    let scores = [];
     let profits = [];
+    let sharpes = [];
     let otherMetrics = [];
 
     for (let i in results) {
 
       if (results.hasOwnProperty(i)) {
 
+        scores.push(results[i]['profit'] * results[i]['sharpe']);
         profits.push(results[i]['profit']);
+        sharpes.push(results[i]['sharpe']);
         otherMetrics.push(results[i]['metrics']);
 
       }
 
     }
 
-    return { profits, otherMetrics };
+    return { scores, profits, sharpes, otherMetrics };
 
   }
 
   async run() {
-
     // Check for old break point
     const loaded_config = await this.loadBreakPoint();
     let population = this.createPopulation();
     let epochNumber = 0;
-    let populationFitness;
+    let populationScores;
+    let populationProfits;
+    let populationSharpes;
     let otherPopulationMetrics;
     let allTimeMaximum = {
       parameters: {},
-      gain: 0,
+      score: -5,
+      profit: -5,
+      sharpe: -5,
       epochNumber: 0,
       otherMetrics: {}
     };
 
     if (loaded_config) {
 
-      console.log(`Loaded previous config from ${this.configName}-${this.baseConfig.gekkoConfig.watch.currency}_${this.baseConfig.gekkoConfig.watch.asset}.json`);
+      console.log(`Loaded previous config from ${this.configName}-${this.currency}_${this.asset}.json`);
       this.previousBestParams = loaded_config;
 
       epochNumber = this.previousBestParams.epochNumber;
-      populationFitness = this.previousBestParams.profit;
+      populationScores = this.previousBestParams.score;
+      populationProfits = this.previousBestParams.profit;
+      populationSharpes = this.previousBestParams.sharpe;
       otherPopulationMetrics = this.previousBestParams.otherMetrics;
       allTimeMaximum = {
         parameters: this.previousBestParams.parameters,
-        gain: this.previousBestParams.gain,
+        score: this.previousBestParams.score,
+        profit: this.previousBestParams.profit,
+        sharpe: this.previousBestParams.sharpe,
         epochNumber: this.previousBestParams.epochNumber,
         otherMetrics: this.previousBestParams.otherMetrics
       };
@@ -393,40 +425,62 @@ class Ga {
 
     }
 
-    console.log(`Starting training with: ${this.populationAmt} units`);
+    console.log(`Starting GA with epoch populations of ${this.populationAmt}, running ${this.parallelqueries} units at a time!`);
 
-    while (allTimeMaximum.gain < this.targetValue) {
+    while (1) {
 
       const startTime = new Date().getTime();
       const res = await this.fitnessApi(population);
 
-      populationFitness = res.profits;
+      populationScores = res.scores;
+      populationProfits = res.profits;
+      populationSharpes = res.sharpes;
       otherPopulationMetrics = res.otherMetrics;
 
       let endTime = new Date().getTime();
       epochNumber++;
-      let results = this.runEpoch(population, populationFitness);
-      // console.log(results);
+      let results = this.runEpoch(population, populationProfits, populationSharpes, populationScores);
       let newPopulation = results[0];
-
       let maxResult = results[1];
-      let value = maxResult[0];
-      let position = maxResult[1];
+      let score = maxResult[2];
+      let profit = maxResult[0];
+      let sharpe = maxResult[1];
+      let position = maxResult[3];
 
-      if (value >= allTimeMaximum.gain) {
 
-        allTimeMaximum.parameters = population[position];
-        allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
-        allTimeMaximum.gain = value;
-        allTimeMaximum.epochNumber = epochNumber;
+      if (this.mainObjective == 'score') {
+        if (score >= allTimeMaximum.score) {
 
+            allTimeMaximum.parameters = population[position];
+            allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
+            allTimeMaximum.score = score;
+            allTimeMaximum.profit = profit;
+            allTimeMaximum.sharpe = sharpe;
+            allTimeMaximum.epochNumber = epochNumber;
+
+        }
+      } else if (this.mainObjective == 'profit') {
+        if (profit >= allTimeMaximum.profit) {
+
+            allTimeMaximum.parameters = population[position];
+            allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
+            allTimeMaximum.score = score;
+            allTimeMaximum.profit = profit;
+            allTimeMaximum.sharpe = sharpe;
+            allTimeMaximum.epochNumber = epochNumber;
+
+        }
       }
+
       console.log(`
     --------------------------------------------------------------
     Epoch number: ${epochNumber}
     Time it took (seconds): ${(endTime - startTime) / 1000}
-    Max profit: ${value} $ max profit position: ${position}
-    Max parametars:
+    Max score: ${score}
+    Max profit: ${profit} ${this.currency}
+    Max sharpe: ${sharpe}
+    Max profit position: ${position}
+    Max parameters:
     `,
         population[position],
         `
@@ -438,18 +492,20 @@ class Ga {
       // useful for finding properties that make no sense and debugging
       // for(let element in population){
       //
-      //     console.log('Fitness: '+populationFitness[element]+' Properties:');
+      //     console.log('Fitness: '+populationProfits[element]+' Properties:');
       //     console.log(population[element]);
       //
       // }
 
       console.log(`
     --------------------------------------------------------------
-    Global maximum: ${allTimeMaximum.gain} $, parameters:
-    `,
-        allTimeMaximum.parameters,
-        `
-    Other metrics of global maximum:
+    Global Maximums:
+    Score: ${allTimeMaximum.score}
+    Profit: ${allTimeMaximum.profit} ${this.currency}
+    Sharpe: ${allTimeMaximum.sharpe}
+    parameters: \n\r`,
+    allTimeMaximum.parameters,
+    `
     Global maximum so far:
     `,
         allTimeMaximum.otherMetrics,
@@ -459,7 +515,31 @@ class Ga {
 
       // store in json
       const json = JSON.stringify(allTimeMaximum);
-      await fs.writeFile(`./results/${this.configName}-${this.baseConfig.gekkoConfig.watch.currency}_${this.baseConfig.gekkoConfig.watch.asset}.json`, json, 'utf8').catch(err => console.log(err) );
+      await fs.writeFile(`./results/${this.configName}-${this.currency}_${this.asset}.json`, json, 'utf8').catch(err => console.log(err) );
+
+      if (this.sendemail) {
+        var transporter = nodemailer.createTransport({
+          service: this.senderservice,
+          auth: {
+            user: this.sender,
+            pass: this.senderpass
+          }
+        });
+        var mailOptions = {
+          from: this.sender,
+          to: this.receiver,
+          subject: `Profit: ${allTimeMaximum.profit} ${this.currency}`,
+          text: json
+        };
+        transporter.sendMail(mailOptions, function(error, info){
+          if (error) {
+            console.log(error);
+          } else {
+            console.log('Email sent: ' + info.response);
+          }
+        });
+      }
+
 
       population = newPopulation;
 
@@ -468,6 +548,7 @@ class Ga {
     console.log(`Finished!
   All time maximum:
   ${allTimeMaximum}`);
+
   }
 
 }
