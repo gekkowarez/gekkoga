@@ -50,7 +50,7 @@ const config = {
   notifications: {
     email: {
       enabled: true,
-      receiver: 'receiver@some.com'
+      receiver: 'receiver@some.com',
       senderservice: 'gmail',
       sender: 'sender@gmail.com',
       senderpass: 'password',
