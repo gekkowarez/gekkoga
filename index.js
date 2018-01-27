@@ -210,8 +210,8 @@ class Ga {
 
        } else {
 
-         populationScores[i] = populationProfits[i] * populationSharpes[i];
-
+         populationScores[i] = Math.tanh(populationProfits[i] / 3) * Math.tanh(populationSharpes[i] / 0.25);
+ 
        }
 
        if (populationScores[i] > maxFitness[2]) {
