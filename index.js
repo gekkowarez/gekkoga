@@ -4,6 +4,7 @@ const randomExt = require('random-ext');
 const rp = require('request-promise');
 const { some } = require('bluebird');
 const fs = require('fs-extra');
+const flat = require('flat');
 
 class Ga {
 
@@ -169,7 +170,9 @@ class Ga {
   mutate(a, maxAmount) {
 
     let amt = randomExt.integer(maxAmount, 0);
-    let allProps = Object.keys(a);
+    // flatten, mutate, return unflattened object
+    let flattened = flat.flatten(a);
+    let allProps = Object.keys(flattened);
 
     let tmp = {};
 
@@ -191,7 +194,7 @@ class Ga {
 
     }
 
-    return tmp;
+    return flat.unflatten(tmp);
   }
 
   // For the given population and fitness, returns new population and max score
@@ -243,11 +246,8 @@ class Ga {
       }
 
     } else {
-
       for (let j = 0; j < this.populationAmt; j++) {
-
         selectionProb[j] = populationProfits[j] / fitnessSum;
-
       }
 
     }
