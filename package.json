@@ -22,6 +22,7 @@
   "dependencies": {
     "async": "^2.6.0",
     "commander": "^2.11.0",
+    "flat": "^4.0.0",
     "fs-extra": "^4.0.2",
     "nodemailer": "^4.4.1",
     "random-ext": "^2.6.1",
