@@ -170,9 +170,9 @@ class Ga {
   mutate(a, maxAmount) {
 
     let amt = randomExt.integer(maxAmount, 0);
-    // flatten, mutate, unflatten, run
+    // flatten, mutate, return unflattened object
     let flattened = flat.flatten(a);
-    let allProps = Object.keys(flattened);//Object.keys(a);
+    let allProps = Object.keys(flattened);
 
     let tmp = {};
 
@@ -246,17 +246,8 @@ class Ga {
       }
 
     } else {
-
       for (let j = 0; j < this.populationAmt; j++) {
-
-        // siehe https://github.com/gekkowarez/gekkoga/issues/28
         selectionProb[j] = populationProfits[j] / fitnessSum;
-        // if (populationProfits[j] > 0) {
-        //   selectionProb[j] = populationProfits[j] / fitnessSum;
-        // }
-        // else {
-        //   selectionProb[j] = 1 / (populationProfits[j] * fitnessSum);
-        // }
       }
 
     }
