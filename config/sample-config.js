@@ -68,8 +68,7 @@ const config = {
     macd_up: randomExt.float(20,0).toFixed(2),
     macd_down: randomExt.float(0,-20).toFixed(2),
 
-    candleSize: config.candleValues[randomExt.integer(config.candleValues.length -1, 0)]
-
+    candleSize: randomExt.pick(config.candleValues)
   })
 };
 
