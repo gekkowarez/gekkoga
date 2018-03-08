@@ -188,7 +188,7 @@ class Ga {
 
     for (let i = 0; i < amt; i++) {
 
-      let position = randomExt.integer(0, a.length);
+      let position = randomExt.integer(Object.keys(a).length, 0);
       let prop = allProps[position];
       tmp[prop] = this.createGene(prop);
 
@@ -214,7 +214,7 @@ class Ga {
        } else {
 
          populationScores[i] = Math.tanh(populationProfits[i] / 3) * Math.tanh(populationSharpes[i] / 0.25);
- 
+
        }
 
        if (populationScores[i] > maxFitness[2]) {
