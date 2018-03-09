@@ -5,6 +5,7 @@ const rp = require('request-promise');
 const { some } = require('bluebird');
 const fs = require('fs-extra');
 const flat = require('flat');
+const util = require('util');
 
 class Ga {
 
@@ -173,7 +174,7 @@ class Ga {
     // flatten, mutate, return unflattened object
     let flattened = flat.flatten(a);
     let allProps = Object.keys(flattened);
-
+    
     let tmp = {};
 
     for (let p in a) {
@@ -187,11 +188,9 @@ class Ga {
     }
 
     for (let i = 0; i < amt; i++) {
-
       let position = randomExt.integer(0, a.length);
       let prop = allProps[position];
       tmp[prop] = this.createGene(prop);
-
     }
 
     return flat.unflatten(tmp);
@@ -332,7 +331,7 @@ class Ga {
         json: true,
         body: outconfig,
         headers: { 'Content-Type': 'application/json' },
-        timeout: 1200000
+        timeout: 10 * 60 * 1000
       });
 
       // These properties will be outputted every epoch, remove property if not needed
@@ -482,7 +481,7 @@ class Ga {
     Max profit position: ${position}
     Max parameters:
     `,
-        population[position],
+        util.inspect(population[position], false, null),
         `
     Other metrics:
     `,
@@ -504,7 +503,7 @@ class Ga {
     Profit: ${allTimeMaximum.profit} ${this.currency}
     Sharpe: ${allTimeMaximum.sharpe}
     parameters: \n\r`,
-    allTimeMaximum.parameters,
+    util.inspect(allTimeMaximum.parameters, false, null),
     `
     Global maximum so far:
     `,
