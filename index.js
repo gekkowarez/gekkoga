@@ -174,7 +174,7 @@ class Ga {
     // flatten, mutate, return unflattened object
     let flattened = flat.flatten(a);
     let allProps = Object.keys(flattened);
-    
+
     let tmp = {};
 
     for (let p in a) {
@@ -188,7 +188,7 @@ class Ga {
     }
 
     for (let i = 0; i < amt; i++) {
-      let position = randomExt.integer(0, a.length);
+      let position = randomExt.integer(Object.keys(a).length, 0);
       let prop = allProps[position];
       tmp[prop] = this.createGene(prop);
     }
@@ -212,7 +212,7 @@ class Ga {
 
        } else {
 
-         populationScores[i] = populationProfits[i] * populationSharpes[i];
+         populationScores[i] = Math.tanh(populationProfits[i] / 3) * Math.tanh(populationSharpes[i] / 0.25);
 
        }
 
@@ -331,7 +331,7 @@ class Ga {
         json: true,
         body: outconfig,
         headers: { 'Content-Type': 'application/json' },
-        timeout: 10 * 60 * 1000
+        timeout: 1200000
       });
 
       // These properties will be outputted every epoch, remove property if not needed
