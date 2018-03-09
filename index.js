@@ -109,12 +109,12 @@ class Ga {
   createGene(prop) {
     // Is first generation, and previous props available, load them as a start-point
     if (this.previousBestParams === null || this.runstarted) {
-      let properties = this.getProperties();
-      return prop === 'all' ? properties : properties[prop];
+      let properties = flat.flatten(this.getProperties());
+      return prop === 'all' ? flat.unflatten(properties) : properties[prop];
     } else if ( this.previousBestParams.parameters && !this.runstarted) {
       this.runstarted = 1;
-      let properties = this.previousBestParams.parameters;
-      return prop === 'all' ? properties : properties[prop];
+      let properties = flat.flatten(this.previousBestParams.parameters);
+      return prop === 'all' ? flat.unflatten(properties) : properties[prop];
     } else {
       throw Error('Could not resolve a suitable state for previousBestParams');
     }
@@ -174,26 +174,14 @@ class Ga {
     // flatten, mutate, return unflattened object
     let flattened = flat.flatten(a);
     let allProps = Object.keys(flattened);
-
-    let tmp = {};
-
-    for (let p in a) {
-
-      if (a.hasOwnProperty(p)) {
-
-        tmp[p] = a[p];
-
-      }
-
-    }
-
+    
     for (let i = 0; i < amt; i++) {
-      let position = randomExt.integer(Object.keys(a).length, 0);
+      let position = randomExt.integer(Object.keys(allProps).length - 1, 0);
       let prop = allProps[position];
-      tmp[prop] = this.createGene(prop);
+      flattened[prop] = this.createGene(prop);
     }
-
-    return flat.unflatten(tmp);
+    
+    return flat.unflatten(flattened);
   }
 
   // For the given population and fitness, returns new population and max score
