@@ -52,18 +52,25 @@ class Ga {
       backtest: {
         daterange: gekkoConfig.daterange
       },
+      backtestResultExporter: {
+        enabled: true,
+        writeToDisk: false,
+        data: {
+          stratUpdates: false,
+          roundtrips: false,
+          stratCandles: true,
+          stratCandleProps: [
+              'close',
+              'start'
+          ],
+          trades: false
+        }
+      },
       performanceAnalyzer: {
         riskFreeReturn: 5,
         enabled: true
       },
-      valid: true,
-      data: {
-        candleProps: ['close', 'start'],
-        indicatorResults: false,
-        report: true,
-        roundtrips: false,
-        trades: false
-      }
+      valid: true
     };
 
 
