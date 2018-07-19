@@ -9,7 +9,7 @@ const util = require('util');
 
 class Ga {
 
-  constructor({ gekkoConfig, stratName, mainObjective, populationAmt, parallelqueries, variation, mutateElements, notifications, getProperties, apiUrl }, configName ) {
+  constructor({ gekkoConfig, stratName, mainObjective, populationAmt, parallelqueries, minSharpe, variation, mutateElements, notifications, getProperties, apiUrl }, configName ) {
     this.configName = configName.replace(/\.js|config\//gi, "");
     this.stratName = stratName;
     this.mainObjective = mainObjective;
@@ -25,6 +25,7 @@ class Ga {
     this.previousBestParams = null;
     this.populationAmt = populationAmt;
     this.parallelqueries = parallelqueries;
+    this.minSharpe = minSharpe;
     this.variation = variation;
     this.mutateElements = mutateElements;
     this.baseConfig = {
@@ -218,6 +219,14 @@ class Ga {
      } else if (this.mainObjective == 'profit') {
 
         if (populationProfits[i] > maxFitness[0]) {
+
+          maxFitness = [populationProfits[i], populationSharpes[i], populationScores[i], i];
+
+        }
+
+      } else if (this.mainObjective == 'profitForMinSharpe') {
+
+        if (populationProfits[i] > maxFitness[0] && populationSharpes[i] >= this.minSharpe) {
 
           maxFitness = [populationProfits[i], populationSharpes[i], populationScores[i], i];
 
@@ -453,6 +462,17 @@ class Ga {
         }
       } else if (this.mainObjective == 'profit') {
         if (profit >= allTimeMaximum.profit) {
+            this.notifynewhigh = true;
+            allTimeMaximum.parameters = population[position];
+            allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
+            allTimeMaximum.score = score;
+            allTimeMaximum.profit = profit;
+            allTimeMaximum.sharpe = sharpe;
+            allTimeMaximum.epochNumber = epochNumber;
+
+        }
+      } else if (this.mainObjective == 'profitForMinSharpe') {
+        if (profit >= allTimeMaximum.profit && sharpe >= this.minSharpe) {
             this.notifynewhigh = true;
             allTimeMaximum.parameters = population[position];
             allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
