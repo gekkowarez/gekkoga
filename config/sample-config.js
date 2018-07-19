@@ -41,10 +41,14 @@ const config = {
   // How many parallel queries to run at once
   parallelqueries: 5,
 
-  // profit || score
+  // Min sharpe to consider in the profitForMinSharpe main objective
+  minSharpe: 0.5,
+
+  // profit || score || profitForMinSharpe
   // score = ideas? feedback?
   // profit = recommended!
-  mainObjective: 'profit',
+  // profitForMinSharpe = same as profit but sharpe will never be lower than minSharpe
+  mainObjective: 'profitForMinSharpe',
 
   // optionally recieve and archive new all time high every new all time high
   notifications: {
