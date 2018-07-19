@@ -28,44 +28,49 @@ class Ga {
     this.variation = variation;
     this.mutateElements = mutateElements;
     this.baseConfig = {
-      gekkoConfig: {
-        watch: gekkoConfig.watch,
-        paperTrader: {
-          slippage: gekkoConfig.slippage,
-          feeTaker: gekkoConfig.feeTaker,
-          feeMaker: gekkoConfig.feeMaker,
-          feeUsing: gekkoConfig.feeUsing,
-          simulationBalance: gekkoConfig.simulationBalance,
-          reportRoundtrips: true,
-          enabled: true
-        },
-        writer: {
-          enabled: false,
-          logpath: ''
-        },
-        tradingAdvisor: {
-          enabled: true,
-          method: this.stratName,
-        },
-        trader: {
-          enabled: false,
-        },
-        backtest: {
-          daterange: gekkoConfig.daterange
-        },
-        performanceAnalyzer: {
-          'riskFreeReturn': 5,
-          'enabled': true
-        },
-        valid: true,
+      watch: gekkoConfig.watch,
+      paperTrader: {
+        slippage: gekkoConfig.slippage,
+        feeTaker: gekkoConfig.feeTaker,
+        feeMaker: gekkoConfig.feeMaker,
+        feeUsing: gekkoConfig.feeUsing,
+        simulationBalance: gekkoConfig.simulationBalance,
+        reportRoundtrips: true,
+        enabled: true
       },
-      data: {
-        candleProps: ['close', 'start'],
-        indicatorResults: false,
-        report: true,
-        roundtrips: false,
-        trades: false
-      }
+      writer: {
+        enabled: false,
+        logpath: ''
+      },
+      tradingAdvisor: {
+        enabled: true,
+        method: this.stratName,
+      },
+      trader: {
+        enabled: false,
+      },
+      backtest: {
+        daterange: gekkoConfig.daterange
+      },
+      backtestResultExporter: {
+        enabled: true,
+        writeToDisk: false,
+        data: {
+          stratUpdates: false,
+          roundtrips: false,
+          stratCandles: true,
+          stratCandleProps: [
+              'close',
+              'start'
+          ],
+          trades: false
+        }
+      },
+      performanceAnalyzer: {
+        riskFreeReturn: 5,
+        enabled: true
+      },
+      valid: true
     };
 
 
@@ -292,12 +297,12 @@ class Ga {
 
     const conf = Object.assign({}, this.baseConfig);
 
-    conf.gekkoConfig[this.stratName] = Object.keys(data).reduce((acc, key) => {
+    conf[this.stratName] = Object.keys(data).reduce((acc, key) => {
       acc[key] = data[key];
       return acc;
     }, {});
 
-    Object.assign(conf.gekkoConfig.tradingAdvisor, {
+    Object.assign(conf.tradingAdvisor, {
       candleSize: data.candleSize,
       historySize: data.historySize
     });
