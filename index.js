@@ -180,13 +180,13 @@ class Ga {
     // flatten, mutate, return unflattened object
     let flattened = flat.flatten(a);
     let allProps = Object.keys(flattened);
-    
+
     for (let i = 0; i < amt; i++) {
       let position = randomExt.integer(Object.keys(allProps).length - 1, 0);
       let prop = allProps[position];
       flattened[prop] = this.createGene(prop);
     }
-    
+
     return flat.unflatten(flattened);
   }
 
@@ -333,7 +333,7 @@ class Ga {
         json: true,
         body: outconfig,
         headers: { 'Content-Type': 'application/json' },
-        timeout: 1200000
+        timeout: 3600000
       });
 
       // These properties will be outputted every epoch, remove property if not needed
