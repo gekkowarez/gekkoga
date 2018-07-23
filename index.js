@@ -338,7 +338,7 @@ class Ga {
 
       // These properties will be outputted every epoch, remove property if not needed
       const properties = ['balance', 'profit', 'sharpe', 'market', 'relativeProfit', 'yearlyProfit', 'relativeYearlyProfit', 'startPrice', 'endPrice', 'trades'];
-      const report = body.report;
+      const report = body.performanceReport;
       let result = { profit: 0, metrics: false };
 
       if (report) {
@@ -351,7 +351,7 @@ class Ga {
 
         }, {});
 
-        result = { profit: body.report.profit, sharpe: body.report.sharpe, metrics: picked };
+        result = { profit: body.performanceReport.profit, sharpe: body.performanceReport.sharpe, metrics: picked };
 
       }
 
