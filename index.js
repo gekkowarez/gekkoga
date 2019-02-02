@@ -9,7 +9,7 @@ const util = require('util');
 
 class Ga {
 
-  constructor({ gekkoConfig, stratName, mainObjective, populationAmt, parallelqueries, variation, mutateElements, notifications, getProperties, apiUrl }, configName ) {
+  constructor({ gekkoConfig, stratName, mainObjective, populationAmt, parallelqueries, minSharpe, variation, mutateElements, notifications, getProperties, apiUrl }, configName ) {
     this.configName = configName.replace(/\.js|config\//gi, "");
     this.stratName = stratName;
     this.mainObjective = mainObjective;
@@ -25,47 +25,53 @@ class Ga {
     this.previousBestParams = null;
     this.populationAmt = populationAmt;
     this.parallelqueries = parallelqueries;
+    this.minSharpe = minSharpe;
     this.variation = variation;
     this.mutateElements = mutateElements;
     this.baseConfig = {
-      gekkoConfig: {
-        watch: gekkoConfig.watch,
-        paperTrader: {
-          slippage: gekkoConfig.slippage,
-          feeTaker: gekkoConfig.feeTaker,
-          feeMaker: gekkoConfig.feeMaker,
-          feeUsing: gekkoConfig.feeUsing,
-          simulationBalance: gekkoConfig.simulationBalance,
-          reportRoundtrips: true,
-          enabled: true
-        },
-        writer: {
-          enabled: false,
-          logpath: ''
-        },
-        tradingAdvisor: {
-          enabled: true,
-          method: this.stratName,
-        },
-        trader: {
-          enabled: false,
-        },
-        backtest: {
-          daterange: gekkoConfig.daterange
-        },
-        performanceAnalyzer: {
-          'riskFreeReturn': 5,
-          'enabled': true
-        },
-        valid: true,
+      watch: gekkoConfig.watch,
+      paperTrader: {
+        slippage: gekkoConfig.slippage,
+        feeTaker: gekkoConfig.feeTaker,
+        feeMaker: gekkoConfig.feeMaker,
+        feeUsing: gekkoConfig.feeUsing,
+        simulationBalance: gekkoConfig.simulationBalance,
+        reportRoundtrips: true,
+        enabled: true
       },
-      data: {
-        candleProps: ['close', 'start'],
-        indicatorResults: false,
-        report: true,
-        roundtrips: false,
-        trades: false
-      }
+      writer: {
+        enabled: false,
+        logpath: ''
+      },
+      tradingAdvisor: {
+        enabled: true,
+        method: this.stratName,
+      },
+      trader: {
+        enabled: false,
+      },
+      backtest: {
+        daterange: gekkoConfig.daterange
+      },
+      backtestResultExporter: {
+        enabled: true,
+        writeToDisk: false,
+        data: {
+          stratUpdates: false,
+          roundtrips: false,
+          stratCandles: true,
+          stratCandleProps: [
+              'close',
+              'start'
+          ],
+          trades: false
+        }
+      },
+      performanceAnalyzer: {
+        riskFreeReturn: 5,
+        enabled: true
+      },
+      valid: true
     };
 
 
@@ -174,13 +180,13 @@ class Ga {
     // flatten, mutate, return unflattened object
     let flattened = flat.flatten(a);
     let allProps = Object.keys(flattened);
-    
+
     for (let i = 0; i < amt; i++) {
       let position = randomExt.integer(Object.keys(allProps).length - 1, 0);
       let prop = allProps[position];
       flattened[prop] = this.createGene(prop);
     }
-    
+
     return flat.unflatten(flattened);
   }
 
@@ -213,6 +219,14 @@ class Ga {
      } else if (this.mainObjective == 'profit') {
 
         if (populationProfits[i] > maxFitness[0]) {
+
+          maxFitness = [populationProfits[i], populationSharpes[i], populationScores[i], i];
+
+        }
+
+      } else if (this.mainObjective == 'profitForMinSharpe') {
+
+        if (populationProfits[i] > maxFitness[0] && populationSharpes[i] >= this.minSharpe) {
 
           maxFitness = [populationProfits[i], populationSharpes[i], populationScores[i], i];
 
@@ -292,12 +306,12 @@ class Ga {
 
     const conf = Object.assign({}, this.baseConfig);
 
-    conf.gekkoConfig[this.stratName] = Object.keys(data).reduce((acc, key) => {
+    conf[this.stratName] = Object.keys(data).reduce((acc, key) => {
       acc[key] = data[key];
       return acc;
     }, {});
 
-    Object.assign(conf.gekkoConfig.tradingAdvisor, {
+    Object.assign(conf.tradingAdvisor, {
       candleSize: data.candleSize,
       historySize: data.historySize
     });
@@ -319,12 +333,12 @@ class Ga {
         json: true,
         body: outconfig,
         headers: { 'Content-Type': 'application/json' },
-        timeout: 1200000
+        timeout: 3600000
       });
 
       // These properties will be outputted every epoch, remove property if not needed
       const properties = ['balance', 'profit', 'sharpe', 'market', 'relativeProfit', 'yearlyProfit', 'relativeYearlyProfit', 'startPrice', 'endPrice', 'trades'];
-      const report = body.report;
+      const report = body.performanceReport;
       let result = { profit: 0, metrics: false };
 
       if (report) {
@@ -337,7 +351,7 @@ class Ga {
 
         }, {});
 
-        result = { profit: body.report.profit, sharpe: body.report.sharpe, metrics: picked };
+        result = { profit: body.performanceReport.profit, sharpe: body.performanceReport.sharpe, metrics: picked };
 
       }
 
@@ -448,6 +462,17 @@ class Ga {
         }
       } else if (this.mainObjective == 'profit') {
         if (profit >= allTimeMaximum.profit) {
+            this.notifynewhigh = true;
+            allTimeMaximum.parameters = population[position];
+            allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
+            allTimeMaximum.score = score;
+            allTimeMaximum.profit = profit;
+            allTimeMaximum.sharpe = sharpe;
+            allTimeMaximum.epochNumber = epochNumber;
+
+        }
+      } else if (this.mainObjective == 'profitForMinSharpe') {
+        if (profit >= allTimeMaximum.profit && sharpe >= this.minSharpe) {
             this.notifynewhigh = true;
             allTimeMaximum.parameters = population[position];
             allTimeMaximum.otherMetrics = otherPopulationMetrics[position];
